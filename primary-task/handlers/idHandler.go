@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"primary-task/app"
 	"strconv"
-	"verve-test/app"
 )
 
 func AcceptHandler(app *app.App) http.HandlerFunc {

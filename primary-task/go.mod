@@ -1,3 +1,3 @@
-module verve-test
+module primary-task
 
 go 1.22
