@@ -11,6 +11,8 @@ import (
 	"time"
 )
 
+var appInstance *app.App
+
 func setupLogger() *log.Logger {
 	timestamp := time.Now().Format("20060102_150405")
 	logFileName := fmt.Sprintf("/app/logs/unique_requests_%s.log", timestamp)
@@ -23,7 +25,7 @@ func setupLogger() *log.Logger {
 	return logger
 }
 
-func initLogUniqueCount(app *app.App) {
+func initLogUniqueCount() {
 	// I wish to have a new ticker independent of starting time,
 	//suppose if it starts at 11:22:23, then new should come at 11:23:00, not 11:23:23,
 	//and thereafter it should be 11:24:00, 11:25:00 etc.
@@ -38,14 +40,14 @@ func initLogUniqueCount(app *app.App) {
 	for {
 		select {
 		case <-ticker.C:
-			app.Mu.Lock()
-			count := len(app.UniqueIDCache)
-			app.UniqueIDCache = make(map[string]struct{})
-			app.Mu.Unlock()
+			appInstance.Mu.Lock()
+			count := len(appInstance.UniqueIDCache)
+			appInstance.UniqueIDCache = make(map[string]struct{})
+			appInstance.Mu.Unlock()
 
-			app.MinuteLogger.Printf("Unique requests in the last minute: %d", count)
+			appInstance.MinuteLogger.Printf("Unique requests in the last minute: %d", count)
 
-		case <-app.ShutdownSignal:
+		case <-appInstance.ShutdownSignal:
 			log.Println("Shutdown signal received, stopping periodic logger.")
 			return
 		}
@@ -53,16 +55,13 @@ func initLogUniqueCount(app *app.App) {
 }
 
 func main() {
-	appConfig := &app.App{
-		UniqueIDCache:  make(map[string]struct{}),
-		MinuteLogger:   setupLogger(),
-		ShutdownSignal: make(chan struct{}),
-	}
+	app.InitApp()
+	appInstance = app.GetAppConst()
+	go initLogUniqueCount()
 	redisAddr := fmt.Sprintf("localhost:%d", 6783)
 	password := "hello123"
 	redisservice.InitRedisService(redisAddr, password, 0)
-	go initLogUniqueCount(appConfig)
-	http.HandleFunc("/api/verve/accept", handlers.AcceptHandler(appConfig))
+	http.HandleFunc("/api/verve/accept", handlers.AcceptHandler)
 
 	port := 8080
 	log.Printf("Starting server on port %d", port)
