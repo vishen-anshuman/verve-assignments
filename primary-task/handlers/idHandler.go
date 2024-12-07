@@ -8,35 +8,33 @@ import (
 	"strconv"
 )
 
-func AcceptHandler(app *app.App) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		query := r.URL.Query()
-		idParam := query.Get("id")
-		if idParam == "" {
-			http.Error(w, "failed", http.StatusBadRequest)
-			return
-		}
-
-		id, err := strconv.Atoi(idParam)
-		if err != nil {
-			http.Error(w, "failed", http.StatusBadRequest)
-			return
-		}
-
-		endpoint := query.Get("endpoint")
-		log.Printf("Received id: %d, endpoint: %s", id, endpoint)
-		if endpoint != "" {
-			go fireEndpointRequest(endpoint, len(app.UniqueIDCache), app.MinuteLogger)
-		}
-		w.WriteHeader(http.StatusOK)
-		_, err = w.Write([]byte("ok"))
-		if err != nil {
-			log.Printf("Error writing response: %v", err)
-		}
-		app.Mu.Lock()
-		app.UniqueIDCache[idParam] = struct{}{}
-		app.Mu.Unlock()
+func AcceptHandler(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	idParam := query.Get("id")
+	if idParam == "" {
+		http.Error(w, "failed", http.StatusBadRequest)
+		return
 	}
+
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		http.Error(w, "failed", http.StatusBadRequest)
+		return
+	}
+	appConst := app.GetAppConst()
+	endpoint := query.Get("endpoint")
+	log.Printf("Received id: %d, endpoint: %s", id, endpoint)
+	if endpoint != "" {
+		go fireEndpointRequest(endpoint, len(appConst.UniqueIDCache), appConst.MinuteLogger)
+	}
+	w.WriteHeader(http.StatusOK)
+	_, err = w.Write([]byte("ok"))
+	if err != nil {
+		log.Printf("Error writing response: %v", err)
+	}
+	appConst.Mu.Lock()
+	appConst.UniqueIDCache[idParam] = struct{}{}
+	appConst.Mu.Unlock()
 }
 
 func fireEndpointRequest(endpoint string, count int, logger *log.Logger) {

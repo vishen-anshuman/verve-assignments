@@ -4,25 +4,14 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"primary-task/app"
 	"primary-task/handlers"
 	"time"
 )
 
-func setupLogger() *log.Logger {
-	timestamp := time.Now().Format("20060102_150405")
-	logFileName := fmt.Sprintf("/app/logs/unique_requests_%s.log", timestamp)
-	logFile, err := os.OpenFile(logFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
-	if err != nil {
-		log.Fatalf("Failed to open log file: %v", err)
-	}
-	logger := log.New(logFile, "", log.Ldate|log.Ltime)
-	log.Printf("Minute logger initialized: %s", logFileName)
-	return logger
-}
+var appInstance *app.App
 
-func initLogUniqueCount(app *app.App) {
+func initLogUniqueCount() {
 	// I wish to have a new ticker independent of starting time,
 	//suppose if it starts at 11:22:23, then new should come at 11:23:00, not 11:23:23,
 	//and thereafter it should be 11:24:00, 11:25:00 etc.
@@ -37,14 +26,13 @@ func initLogUniqueCount(app *app.App) {
 	for {
 		select {
 		case <-ticker.C:
-			app.Mu.Lock()
-			count := len(app.UniqueIDCache)
-			app.UniqueIDCache = make(map[string]struct{})
-			app.Mu.Unlock()
+			appInstance.Mu.Lock()
+			count := len(appInstance.UniqueIDCache)
+			appInstance.UniqueIDCache = make(map[string]struct{})
+			appInstance.Mu.Unlock()
+			appInstance.MinuteLogger.Printf("Unique requests in the last minute: %d", count)
 
-			app.MinuteLogger.Printf("Unique requests in the last minute: %d", count)
-
-		case <-app.ShutdownSignal:
+		case <-appInstance.ShutdownSignal:
 			log.Println("Shutdown signal received, stopping periodic logger.")
 			return
 		}
@@ -52,13 +40,10 @@ func initLogUniqueCount(app *app.App) {
 }
 
 func main() {
-	appConfig := &app.App{
-		UniqueIDCache:  make(map[string]struct{}),
-		MinuteLogger:   setupLogger(),
-		ShutdownSignal: make(chan struct{}),
-	}
-	go initLogUniqueCount(appConfig)
-	http.HandleFunc("/api/verve/accept", handlers.AcceptHandler(appConfig))
+	app.InitApp()
+	appInstance = app.GetAppConst()
+	go initLogUniqueCount()
+	http.HandleFunc("/api/verve/accept", handlers.AcceptHandler)
 
 	port := 8080
 	log.Printf("Starting server on port %d", port)
