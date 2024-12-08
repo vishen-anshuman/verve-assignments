@@ -48,9 +48,9 @@ func addUniqueCountToCache(idParam string) {
 	idCount, _ := appInstance.RedisService.ReadFromCache(idParamKey)
 	uniqueCount, _ := appInstance.RedisService.ReadFromCache(app.UNIQUE_COUNT)
 	if idCount == "" {
-		appInstance.RedisService.WriteToCache(idParamKey, "exists")
+		appInstance.RedisService.WriteToCache(idParamKey, "exists", 0)
 		countInt, _ := strconv.Atoi(uniqueCount)
-		appInstance.RedisService.WriteToCache(app.UNIQUE_COUNT, string(countInt+1))
+		appInstance.RedisService.WriteToCache(app.UNIQUE_COUNT, string(countInt+1), 0)
 	}
 	appInstance.Mu.Unlock()
 }

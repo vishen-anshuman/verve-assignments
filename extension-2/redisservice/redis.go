@@ -42,8 +42,13 @@ func (redisService *RedisService) ReadFromCache(key string) (string, error) {
 	return val, nil
 }
 
-func (redisService *RedisService) WriteToCache(key, value string) error {
-	err := redisService.Client.Set(redisService.Ctx, key, value, time.Minute).Err()
+func (redisService *RedisService) WriteToCache(key, value string, durationUntilNextMinute time.Duration) error {
+	now := time.Now()
+	nextFullMinute := now.Truncate(time.Minute).Add(time.Minute)
+	if durationUntilNextMinute == 0 {
+		durationUntilNextMinute = nextFullMinute.Sub(now)
+	}
+	err := redisService.Client.Set(redisService.Ctx, key, value, durationUntilNextMinute).Err()
 	if err != nil {
 		return err
 	}

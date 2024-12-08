@@ -36,7 +36,7 @@ func idProcessingMiddleware(idParam string) error {
 		appInst.Mu.Unlock()
 		return fmt.Errorf("ID is already being processed")
 	}
-	appInst.RedisService.WriteToCache(idParamKey, "exists")
+	appInst.RedisService.WriteToCache(idParamKey, "exists", 1)
 	appInst.Mu.Unlock()
 	return nil
 }

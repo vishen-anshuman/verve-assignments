@@ -41,7 +41,7 @@ func initLogUniqueCount() {
 		case <-ticker.C:
 			appInstance.Mu.Lock()
 			count, _ := appInstance.RedisService.ReadFromCache(app.UNIQUE_COUNT)
-			appInstance.RedisService.WriteToCache(app.UNIQUE_COUNT, "0")
+			appInstance.RedisService.WriteToCache(app.UNIQUE_COUNT, "0", 0)
 			appInstance.Mu.Unlock()
 			appInstance.MinuteLogger.Printf("Unique requests in the last minute: %d", count)
 
