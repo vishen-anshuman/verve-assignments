@@ -12,10 +12,10 @@ func BeforeProcessing(r *http.Request, appInst *app.App) int {
 	query := r.URL.Query()
 	idParam := query.Get("id")
 	if idParam == "" {
-		return http.StatusConflict
+		return http.StatusBadRequest
 	}
 	if err := idProcessingMiddleware(idParam, appInst); err != nil {
-		return http.StatusBadRequest
+		return http.StatusConflict
 	}
 	return 0
 }

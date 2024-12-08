@@ -48,7 +48,7 @@ case "$1" in
         start_and_create
         ;;
     *)
-        echo "Usage: $0 {start|create-topic|list-topics}"
+        echo "Usage: $0 {start|create-topic|start_and_create}"
         exit 1
         ;;
 esac

@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 func AcceptHandler(w http.ResponseWriter, r *http.Request) {
@@ -36,6 +37,7 @@ func AcceptHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("Error writing response: %v", err)
 	}
+	time.Sleep(time.Minute)
 	defer func() {
 		helperfunc.AfterProcessing(idParam, appConst)
 	}()
