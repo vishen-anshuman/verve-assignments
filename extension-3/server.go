@@ -40,10 +40,11 @@ func initLogUniqueCount() {
 		select {
 		case <-ticker.C:
 			appInstance.Mu.Lock()
-			count, _ := appInstance.RedisService.ReadFromCache("UNIQUE_COUNT")
-			appInstance.RedisService.WriteToCache("UNIQUE_COUNT", "0")
-			appInstance.KafkaService.WriteLog(fmt.Sprintf("Unique requests in the last minute: %s", count))
+			count, _ := appInstance.RedisService.ReadFromCache(app.UNIQUE_COUNT)
+			appInstance.RedisService.WriteToCache(app.UNIQUE_COUNT, "0")
 			appInstance.Mu.Unlock()
+			appInstance.MinuteLogger.Printf("Unique requests in the last minute: %d", count)
+
 		case <-appInstance.ShutdownSignal:
 			log.Println("Shutdown signal received, stopping periodic logger.")
 			return

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"extension-3/app"
+	"extension-3/helper"
 	"fmt"
 	"log"
 	"net/http"
@@ -9,50 +10,62 @@ import (
 )
 
 func AcceptHandler(w http.ResponseWriter, r *http.Request) {
-	appInstance := app.GetAppConst()
-	query := r.URL.Query()
-	idParam := query.Get("id")
-	if idParam == "" {
-		http.Error(w, "failed", http.StatusBadRequest)
+	if status := helperfunc.BeforeProcessing(r); status == 400 || status == 409 {
+		if status == 409 {
+			http.Error(w, "Requested Id being Processed", http.StatusConflict)
+			return
+		}
+		http.Error(w, "Invalid Requested Id", http.StatusBadRequest)
 		return
 	}
-
+	query := r.URL.Query()
+	idParam := query.Get("id")
+	endpoint := query.Get("endpoint")
 	id, err := strconv.Atoi(idParam)
 	if err != nil {
 		http.Error(w, "failed", http.StatusBadRequest)
 		return
 	}
-	uniqueCount, _ := appInstance.RedisService.ReadFromCache("UNIQUE_COUNT")
-	endpoint := query.Get("endpoint")
 	log.Printf("Received id: %d, endpoint: %s", id, endpoint)
-	if endpoint != "" {
-		go fireEndpointRequest(endpoint, uniqueCount, appInstance.MinuteLogger)
-	}
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write([]byte("ok"))
 	if err != nil {
 		log.Printf("Error writing response: %v", err)
 	}
+	addUniqueCountToCache(idParam)
+	if endpoint != "" {
+		go fireEndpointRequest(endpoint)
+	}
+	defer func() {
+		helperfunc.AfterProcessing(idParam)
+	}()
+}
+
+func addUniqueCountToCache(idParam string) {
+	appInstance := app.GetAppConst()
 	appInstance.Mu.Lock()
-	idParamKey := fmt.Sprintf("UNIQUE_COUNT_%s", idParam)
+	idParamKey := fmt.Sprintf(app.UNIQUE_ID_FORMAT, idParam)
 	idCount, _ := appInstance.RedisService.ReadFromCache(idParamKey)
+	uniqueCount, _ := appInstance.RedisService.ReadFromCache(app.UNIQUE_COUNT)
 	if idCount == "" {
-		appInstance.RedisService.WriteToCache(idParamKey, "1")
+		appInstance.RedisService.WriteToCache(idParamKey, "exists")
 		countInt, _ := strconv.Atoi(uniqueCount)
-		appInstance.RedisService.WriteToCache("UNIQUE_COUNT", string(countInt+1))
+		appInstance.RedisService.WriteToCache(app.UNIQUE_COUNT, string(countInt+1))
 	}
 	appInstance.Mu.Unlock()
 }
 
-func fireEndpointRequest(endpoint, count string, logger *log.Logger) {
-	url := fmt.Sprintf("%s?count=%s", endpoint, count)
+func fireEndpointRequest(endpoint string) {
+	appInstance := app.GetAppConst()
+	count, _ := appInstance.RedisService.ReadFromCache(app.UNIQUE_COUNT)
+	url := fmt.Sprintf("%s?count=%d", endpoint, count)
 	resp, err := http.Get(url)
 	if err != nil {
-		logger.Printf("Error making GET request to %s: %v", url, err)
+		appInstance.MinuteLogger.Printf("Error making GET request to %s: %v", url, err)
 		log.Printf("Error making GET request to %s: %v", url, err)
 		return
 	}
 	defer resp.Body.Close()
-	logger.Printf("GET request to %s returned status code: %d", url, resp.StatusCode)
+	appInstance.MinuteLogger.Printf("GET request to %s returned status code: %d", url, resp.StatusCode)
 	log.Printf("GET request to %s returned status code: %d", url, resp.StatusCode)
 }

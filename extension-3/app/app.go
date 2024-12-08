@@ -17,6 +17,12 @@ type App struct {
 	ShutdownSignal chan struct{}
 }
 
+const (
+	UNIQUE_COUNT         = "UNIQUE_COUNT"
+	UNIQUE_ID_FORMAT     = "UNIQUE_ID_%s"
+	PROCESSING_ID_FORMAT = "PROCESSING_ID_%s"
+)
+
 var appConst *App
 
 func InitApp() {
