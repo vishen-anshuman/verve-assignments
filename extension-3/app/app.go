@@ -21,12 +21,11 @@ var appConst *App
 
 func InitApp() {
 	brokers := []string{"localhost:9092"}
-	topic := "example-topic"
-	redisAddr := fmt.Sprintf("localhost:%d", 6783)
-	password := "hello123"
+	topic := "verve-streaming"
+	redisAddr := fmt.Sprintf("localhost:%d", 6379)
 	appConst = &App{
 		Mu:             sync.Mutex{},
-		RedisService:   redisservice.InitRedisService(redisAddr, password, 0),
+		RedisService:   redisservice.InitRedisService(redisAddr),
 		MinuteLogger:   logger.InitLogger(),
 		KafkaService:   kafkaservice.InitKafkaService(brokers, topic),
 		ShutdownSignal: make(chan struct{}),

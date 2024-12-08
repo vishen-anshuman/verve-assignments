@@ -13,12 +13,10 @@ type RedisService struct {
 	Ctx    context.Context
 }
 
-func InitRedisService(redisAddr, redisPassword string, db int) *RedisService {
+func InitRedisService(redisAddr string) *RedisService {
 	ctx := context.Background()
 	client := redis.NewClient(&redis.Options{
-		Addr:     redisAddr,
-		Password: redisPassword,
-		DB:       db,
+		Addr: redisAddr,
 	})
 
 	_, err := client.Ping(ctx).Result()

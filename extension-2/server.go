@@ -58,9 +58,8 @@ func main() {
 	app.InitApp()
 	appInstance = app.GetAppConst()
 	go initLogUniqueCount()
-	redisAddr := fmt.Sprintf("localhost:%d", 6783)
-	password := "hello123"
-	redisservice.InitRedisService(redisAddr, password, 0)
+	redisAddr := fmt.Sprintf("localhost:%d", 6379)
+	redisservice.InitRedisService(redisAddr)
 	http.HandleFunc("/api/verve/accept", handlers.AcceptHandler)
 
 	port := 8080
