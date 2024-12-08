@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y git
 # Clone the repository from GitHub
 RUN git clone https://github.com/vishen-anshuman/verve-assignments.git .
 
-WORKDIR /app/primary-task
+WORKDIR /app/extension-3
 
 # Download Go dependencies
 RUN go mod download
