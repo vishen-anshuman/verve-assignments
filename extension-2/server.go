@@ -3,7 +3,6 @@ package main
 import (
 	"extension-2/app"
 	"extension-2/handlers"
-	"extension-2/redisservice"
 	"fmt"
 	"log"
 	"net/http"
@@ -41,10 +40,9 @@ func initLogUniqueCount() {
 		select {
 		case <-ticker.C:
 			appInstance.Mu.Lock()
-			count := len(appInstance.UniqueIDCache)
-			appInstance.UniqueIDCache = make(map[string]struct{})
+			count, _ := appInstance.RedisService.ReadFromCache(app.UNIQUE_COUNT)
+			appInstance.RedisService.WriteToCache(app.UNIQUE_COUNT, "0")
 			appInstance.Mu.Unlock()
-
 			appInstance.MinuteLogger.Printf("Unique requests in the last minute: %d", count)
 
 		case <-appInstance.ShutdownSignal:
@@ -58,8 +56,6 @@ func main() {
 	app.InitApp()
 	appInstance = app.GetAppConst()
 	go initLogUniqueCount()
-	redisAddr := fmt.Sprintf("localhost:%d", 6379)
-	redisservice.InitRedisService(redisAddr)
 	http.HandleFunc("/api/verve/accept", handlers.AcceptHandler)
 
 	port := 8080

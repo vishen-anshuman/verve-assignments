@@ -13,9 +13,7 @@ type RedisService struct {
 	Ctx    context.Context
 }
 
-var redisService *RedisService
-
-func InitRedisService(redisAddr string) {
+func InitRedisService(redisAddr string) *RedisService {
 	ctx := context.Background()
 	client := redis.NewClient(&redis.Options{
 		Addr: redisAddr,
@@ -27,13 +25,13 @@ func InitRedisService(redisAddr string) {
 	}
 
 	log.Println("Connected to Redis")
-	redisService = &RedisService{
+	return &RedisService{
 		Client: client,
 		Ctx:    ctx,
 	}
 }
 
-func ReadFromCache(key string) (string, error) {
+func (redisService *RedisService) ReadFromCache(key string) (string, error) {
 	val, err := redisService.Client.Get(redisService.Ctx, key).Result()
 	if err == redis.Nil {
 		log.Printf("Key '%s' does not exist in cache", key)
@@ -44,7 +42,7 @@ func ReadFromCache(key string) (string, error) {
 	return val, nil
 }
 
-func WriteToCache(key, value string) error {
+func (redisService *RedisService) WriteToCache(key, value string) error {
 	err := redisService.Client.Set(redisService.Ctx, key, value, time.Minute).Err()
 	if err != nil {
 		return err
@@ -53,7 +51,7 @@ func WriteToCache(key, value string) error {
 	return nil
 }
 
-func DeleteCache(key string) error {
+func (redisService *RedisService) DeleteCache(key string) error {
 	err := redisService.Client.Del(redisService.Ctx, key).Err()
 	if err != nil {
 		return err

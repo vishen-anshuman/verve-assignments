@@ -7,12 +7,10 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"time"
 )
 
 func AcceptHandler(w http.ResponseWriter, r *http.Request) {
-	appConst := app.GetAppConst()
-	if status := helperfunc.BeforeProcessing(r, appConst); status == 400 || status == 409 {
+	if status := helperfunc.BeforeProcessing(r); status == 400 || status == 409 {
 		if status == 409 {
 			http.Error(w, "Requested Id being Processed", http.StatusConflict)
 			return
@@ -29,29 +27,45 @@ func AcceptHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Printf("Received id: %d, endpoint: %s", id, endpoint)
-	if endpoint != "" {
-		go fireEndpointRequest(endpoint, len(appConst.UniqueIDCache), appConst.MinuteLogger)
-	}
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write([]byte("ok"))
 	if err != nil {
 		log.Printf("Error writing response: %v", err)
 	}
-	time.Sleep(time.Minute)
+	addUniqueCountToCache(idParam)
+	if endpoint != "" {
+		go fireEndpointRequest(endpoint)
+	}
 	defer func() {
-		helperfunc.AfterProcessing(idParam, appConst)
+		helperfunc.AfterProcessing(idParam)
 	}()
 }
 
-func fireEndpointRequest(endpoint string, count int, logger *log.Logger) {
+func addUniqueCountToCache(idParam string) {
+	appInstance := app.GetAppConst()
+	appInstance.Mu.Lock()
+	idParamKey := fmt.Sprintf(app.UNIQUE_ID_FORMAT, idParam)
+	idCount, _ := appInstance.RedisService.ReadFromCache(idParamKey)
+	uniqueCount, _ := appInstance.RedisService.ReadFromCache(app.UNIQUE_COUNT)
+	if idCount == "" {
+		appInstance.RedisService.WriteToCache(idParamKey, "exists")
+		countInt, _ := strconv.Atoi(uniqueCount)
+		appInstance.RedisService.WriteToCache(app.UNIQUE_COUNT, string(countInt+1))
+	}
+	appInstance.Mu.Unlock()
+}
+
+func fireEndpointRequest(endpoint string) {
+	appInstance := app.GetAppConst()
+	count, _ := appInstance.RedisService.ReadFromCache(app.UNIQUE_COUNT)
 	url := fmt.Sprintf("%s?count=%d", endpoint, count)
 	resp, err := http.Get(url)
 	if err != nil {
-		logger.Printf("Error making GET request to %s: %v", url, err)
+		appInstance.MinuteLogger.Printf("Error making GET request to %s: %v", url, err)
 		log.Printf("Error making GET request to %s: %v", url, err)
 		return
 	}
 	defer resp.Body.Close()
-	logger.Printf("GET request to %s returned status code: %d", url, resp.StatusCode)
+	appInstance.MinuteLogger.Printf("GET request to %s returned status code: %d", url, resp.StatusCode)
 	log.Printf("GET request to %s returned status code: %d", url, resp.StatusCode)
 }
