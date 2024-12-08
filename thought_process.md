@@ -19,8 +19,9 @@
 Its requirement was pretty simple, for `endpint` coming in api request post calls to be made
 
 ## Extension 2
-As the service is getting into distributed mode, a local cache will never be good,<br>
-so instead of local cache `redis` cache is used. **Extension 2 is implemented on top of Primary task**
+As the service is getting into distributed mode and to take care of DeDups, <br>
+a local cache will never be good, so instead of local cache `redis` cache is used. <br>
+**Extension 2 is implemented on top of Primary task**
 
 ## Extension 3
 Instead of logging the unique count to log, it has to be streamed. I have used `Kafka` as the streaming service.<br>
