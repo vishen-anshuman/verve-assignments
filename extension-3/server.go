@@ -41,7 +41,7 @@ func initLogUniqueCount() {
 		case <-ticker.C:
 			appInstance.Mu.Lock()
 			count, _ := appInstance.RedisService.ReadFromCache("UNIQUE_COUNT")
-			appInstance.RedisService.WriteToCache("UNIQUE_COUNT", "")
+			appInstance.RedisService.WriteToCache("UNIQUE_COUNT", "0")
 			appInstance.KafkaService.WriteLog(fmt.Sprintf("Unique requests in the last minute: %s", count))
 			appInstance.Mu.Unlock()
 		case <-appInstance.ShutdownSignal:
